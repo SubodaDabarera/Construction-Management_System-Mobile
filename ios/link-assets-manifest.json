@@ -1,0 +1,17 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Demo_ConeriaScript.ttf",
+      "sha1": "ca1fcc4e2e60f057ac959f1ce5dc3fd12c348cd8"
+    },
+    {
+      "path": "assets/fonts/MotionPicture_PersonalUseOnly.ttf",
+      "sha1": "e8a4b13bdd2ba43c5e4a6f68f1522e31602726a4"
+    },
+    {
+      "path": "assets/fonts/Vogue.ttf",
+      "sha1": "e168a4f917e0670cb2367cb0224aef844b5f9a02"
+    }
+  ]
+}
