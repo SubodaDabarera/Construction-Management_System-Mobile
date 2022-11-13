@@ -142,6 +142,7 @@ const SignIn = ({navigation}) => {
                 </Text>
                 <TextInput
                   placeholder="Enter Password"
+                  secureTextEntry={true}
                   style={{
                     backgroundColor: COLOURS.backgroundLight,
                     borderRadius: 30,

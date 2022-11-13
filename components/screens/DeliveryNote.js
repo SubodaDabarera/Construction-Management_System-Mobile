@@ -5,10 +5,13 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  Keyboard,
+  ToastAndroid,
 } from 'react-native';
 import React, {useState} from 'react';
 import {COLOURS} from '../database/Database';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {addDeliveryNote, updateDeliveryNoteStatus_Orders} from '../APIs/deliveryNoteAPI';
 
 const DeliveryNote = ({route, navigation}) => {
   // const [zip, setZip] = useState();
@@ -16,11 +19,51 @@ const DeliveryNote = ({route, navigation}) => {
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [phone, setPhone] = useState();
+  const [isCreationSuccess, setIsCreationSuccess] = useState(false);
 
   const {OrderID} = route.params;
 
-  const onSubmit = () => {
-    console.log(zip, city, province, phone);
+  const onSubmit = async () => {
+    // console.log(zip, city, province, phone);
+
+    if (
+      zip.length > 0 &&
+      city.length > 0 &&
+      province.length > 0 &&
+      phone.length > 0
+    ) {
+      console.log(zip, city, province, phone);
+      console.log(OrderID);
+
+      // axios call here...
+      await addDeliveryNote(
+        {orderId: OrderID, zip, city, province, siteManagerMobile: phone},
+        setIsCreationSuccess,
+      )
+        .then(() => {
+          console.log('Delivery note added');
+          ToastAndroid.show('Delivert note added!', ToastAndroid.SHORT);
+        })
+        .catch(err => {
+          console.log(err);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.SHORT);
+        });
+
+      Keyboard.dismiss();
+
+      await updateDeliveryNoteStatus_Orders(OrderID, true).then(() => {
+        console.log("Delivery note updated")
+      }).catch((err) => {
+        console.log(err)
+      })
+
+      setCity('');
+      setZip('');
+      setProvince('');
+      setPhone('');
+
+      navigation.navigate('Home');
+    }
   };
 
   return (
@@ -78,14 +121,18 @@ const DeliveryNote = ({route, navigation}) => {
               flexDirection: 'row',
             }}>
             <Text
-              style = {{
-                fontSize: 16
-              }}
-            >Order ID :</Text>
-            <Text style = {{
-              color: COLOURS.blue,
-              marginHorizontal: 10
-            }}>{OrderID}</Text>
+              style={{
+                fontSize: 16,
+              }}>
+              Order ID :
+            </Text>
+            <Text
+              style={{
+                color: COLOURS.blue,
+                marginHorizontal: 10,
+              }}>
+              {OrderID}
+            </Text>
           </View>
           <View
             style={{
@@ -178,6 +225,7 @@ const DeliveryNote = ({route, navigation}) => {
             </Text>
             <TextInput
               placeholder="Enter Contact number"
+              type="number"
               style={{
                 backgroundColor: COLOURS.backgroundLight,
                 borderRadius: 30,
@@ -196,7 +244,7 @@ const DeliveryNote = ({route, navigation}) => {
             }}>
             <TouchableOpacity
               onPress={() => {
-                onSubmit();
+                onSubmit()
               }}
               style={{
                 paddingVertical: 14,

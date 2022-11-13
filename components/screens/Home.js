@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import React, {Component, useEffect, useState} from 'react';
 import {COLOURS, Items} from '../database/Database';
@@ -375,9 +376,19 @@ const Home = ({navigation}) => {
               justifyContent: 'space-around',
               marginBottom: 30,
             }}>
-            {productList.map(data => {
-              return <ProductCard data={data} key={data._id} />;
-            })}
+            {productList.length > 0 ? (
+              <>
+                {productList.map(data => {
+                  return <ProductCard data={data} key={data._id} />;
+                })}
+              </>
+            ) : (
+              <View style = {{
+                marginTop: 30
+              }} > 
+              <ActivityIndicator size="large" color={COLOURS.yellow} />
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>

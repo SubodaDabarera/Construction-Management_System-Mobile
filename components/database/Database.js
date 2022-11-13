@@ -7,6 +7,8 @@ export const COLOURS = {
     red2: '#fa2205',
     redDark: '#b3200c',
     blue: '#0043F9',
+    blue2: '#3471eb',
+    blueLight: '#cad5ed',
     light: '#F0F0F3',
     yellow: '#dbb716',
     yellowDark: '#b3940c',

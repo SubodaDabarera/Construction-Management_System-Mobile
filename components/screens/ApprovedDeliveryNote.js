@@ -1,16 +1,67 @@
-import {View, Text, StatusBar, ScrollView, TouchableOpacity, TextInput} from 'react-native';
+import {View, Text, StatusBar, ScrollView, TouchableOpacity, TextInput, Keyboard, ToastAndroid} from 'react-native';
 import React, {useState} from 'react';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {COLOURS} from '../database/Database';
+import { addDeliveryNote, updateDeliveryNoteStatus_Orders } from '../APIs/deliveryNoteAPI';
 
-const ApprovedDeliveryNote = ({navigation}) => {
+const ApprovedDeliveryNote = ({route,navigation}) => {
   const [zip, setZip] = useState();
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [phone, setPhone] = useState();
+  const [isCreationSuccess, setIsCreationSuccess] = useState(false)
 
-  const onSubmit = () => {
+  const {OrderID} = route.params;
+
+  // const onSubmit = () => {
+  //   console.log(zip, city, province, phone);
+    
+  // };
+
+  
+  const onSubmit = async () => {
     console.log(zip, city, province, phone);
+
+    if (
+      zip.length > 0 &&
+      city.length > 0 &&
+      province.length > 0 &&
+      phone.length > 0
+    ) {
+      console.log(zip, city, province, phone);
+      console.log(OrderID);
+
+      // axios call here...
+      await addDeliveryNote(
+        {orderId: OrderID, zip, city, province, siteManagerMobile: phone},
+        setIsCreationSuccess,
+      )
+        .then(() => {
+          console.log('approved delivery note added');
+          ToastAndroid.show('Delivery note added!', ToastAndroid.SHORT);
+        })
+        .catch(err => {
+          console.log(err);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.SHORT);
+        });
+
+      Keyboard.dismiss();
+
+      await updateDeliveryNoteStatus_Orders(OrderID, true).then(() => {
+        console.log("Delivery note updated")
+      }).catch((err) => {
+        console.log(err)
+      })
+
+      setCity('');
+      setZip('');
+      setProvince('');
+      setPhone('');
+
+      navigation.navigate('Home');
+    }else{
+      console.log("called")
+    }
   };
 
   return (
@@ -61,6 +112,26 @@ const ApprovedDeliveryNote = ({navigation}) => {
           </Text>
         </View>
         <View>
+        <View
+            style={{
+              marginHorizontal: 30,
+              marginTop: 30,
+              flexDirection: 'row',
+            }}>
+            <Text
+              style={{
+                fontSize: 16,
+              }}>
+              Order ID :
+            </Text>
+            <Text
+              style={{
+                color: COLOURS.blue,
+                marginHorizontal: 10,
+              }}>
+              {OrderID}
+            </Text>
+          </View>
           <View
             style={{
               marginVertical: 10,
@@ -163,7 +234,7 @@ const ApprovedDeliveryNote = ({navigation}) => {
             />
           </View>
 
-          <View
+          {/* <View
             style={{
               marginVertical: 10,
             }}>
@@ -188,7 +259,7 @@ const ApprovedDeliveryNote = ({navigation}) => {
               }}
               onChangeText={setPhone}
             />
-          </View>
+          </View> */}
 
           <View
             style={{
@@ -202,7 +273,7 @@ const ApprovedDeliveryNote = ({navigation}) => {
               style={{
                 paddingVertical: 14,
                 marginHorizontal: 20,
-                backgroundColor: COLOURS.blue,
+                backgroundColor: COLOURS.yellow,
                 borderRadius: 20,
                 justifyContent: 'center',
                 alignItems: 'center',
