@@ -6,8 +6,6 @@ export const addProduct = async (
   { owner, title, unitPrice, quantity, location, description },
   setIsCreationSuccess
 ) => {
-  console.log("inside API");
-  console.log(owner);
   try {
     await axios
       .post(`${BACKEND_URL}/product/add-product`, {
@@ -57,7 +55,6 @@ export const viewProductsList = async (setProductList) =>
   export const viewProduct = async (productId, setProductDetails) => {
     try {
       await axios.get(`${BACKEND_URL}/product/` + productId).then((result) => {
-        console.log(result.data.existingProduct);
         setProductDetails(result.data.existingProduct);
       });
     } catch (err) {

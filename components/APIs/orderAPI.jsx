@@ -8,10 +8,12 @@ export const createOrder = async (
     owner,
     title,
     siteManager,
+    siteManagerName,
     productId,
     quantity,
     unitPrice,
     totalAmount,
+    status
   },
   setIsCreationSuccess,
 ) => {
@@ -22,10 +24,12 @@ export const createOrder = async (
         owner,
         title,
         siteManager,
+        siteManagerName,
         productId,
         quantity,
         unitPrice,
         totalAmount,
+        status
       })
       .then(result => {
         setIsCreationSuccess(result.data.success);

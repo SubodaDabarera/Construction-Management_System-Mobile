@@ -19,6 +19,7 @@ import DropdownComponent from '../common/DropdownComponent';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import {createOrder} from '../APIs/orderAPI';
+import {getUserDetails, updateSMtotalSpent} from '../APIs/userAPI';
 
 const ProductInfo = ({route, navigation}) => {
   const {productData} = route.params;
@@ -28,19 +29,107 @@ const ProductInfo = ({route, navigation}) => {
   const [selectedQty, setSelectedQty] = useState(null);
   const [isCreationSuccess, setIsCreationSuccess] = useState(false);
   const [userId, setUserId] = useState('63610c9b67ab4384d0d8c35e');
+  const [userName, setUserName] = useState('Perera')
   const [deliveryFee, setDeliveryFee] = useState(100);
+  const [userDetails, setUserDetails] = useState();
 
   const width = Dimensions.get('window').width;
   const scrollX = new Animated.Value(0);
   let position = Animated.divide(scrollX, width);
 
-  // useEffect(() => {
-  //   const unsubscribe = navigation.addListener('focus', () => {
-  //     getDataFromDB();
-  //   });
+  useEffect(() => {
+    async function getUser() {
+      await getUserDetails(userId, setUserDetails)
+        .then(() => {
+          console.log('User details fetched');
+        })
+        .catch(err => {
+          console.log(err);
+        });
+    }
 
-  //   return unsubscribe;
-  // }, [navigation]);
+    getUser();
+  }, [navigation]);
+
+  // console.log(userDetails)
+
+  // add items to database
+  const placeOrder = async product => {
+    if (!selectedQty) {
+      ToastAndroid.show('Please select Quantity', ToastAndroid.SHORT);
+      return;
+    }
+
+    // checking the conditions
+    if (
+      userDetails.projectBudget > userDetails.maxSpent &&
+      userDetails.totalSpent + selectedQty * product.unitPrice <
+        userDetails.maxSpent
+    ) {
+     
+      // increment user's total spent
+      await updateSMtotalSpent(userId, selectedQty * product.unitPrice).then(
+        () => {
+          console.log("Site manager's total spent incremented");
+        },
+      ).catch((err) => {
+        console.log(err)
+      })
+
+      await createOrder(
+        {
+          ownerId: product.ownerId,
+          owner: product.owner,
+          title: product.title,
+          siteManager: userId,
+          siteManagerName: userName,
+          productId: product._id,
+          quantity: selectedQty,
+          unitPrice: product.unitPrice,
+          totalAmount: product.unitPrice * selectedQty + deliveryFee,
+          status: 'automatic'
+        },
+        setIsCreationSuccess,
+      ).then(() => {
+        console.log('Order has placed');
+        ToastAndroid.show('Order placed', ToastAndroid.SHORT);
+        navigation.navigate('Home');
+      });
+      navigation.navigate('OrderedItems');
+      
+    }
+    else{
+      await updateSMtotalSpent(userId, selectedQty * product.unitPrice).then(
+        () => {
+          console.log("Site manager's total spent incremented");
+        },
+      ).catch((err) => {
+        console.log(err)
+      })
+
+
+      // make axios call and send data to backend
+      await createOrder(
+        {
+          ownerId: product.ownerId,
+          owner: product.owner,
+          title: product.title,
+          siteManager: userId,
+          siteManagerName: userName,
+          productId: product._id,
+          quantity: selectedQty,
+          unitPrice: product.unitPrice,
+          totalAmount: product.unitPrice * selectedQty + deliveryFee,
+        },
+        setIsCreationSuccess,
+      ).then(() => {
+        console.log('Order has placed');
+        ToastAndroid.show('Order placed', ToastAndroid.SHORT);
+        navigation.navigate('Home');
+      });
+
+    }
+  };
 
   //   product horizontal scroll product card
   const renderProduct = ({item, index}) => {
@@ -64,76 +153,6 @@ const ProductInfo = ({route, navigation}) => {
     );
   };
 
-  //   add to cart
-  const addToCart = async id => {
-    if (selectedQty) {
-      await console.log(selectedQty);
-    } else {
-      ToastAndroid.show('Please select Quantity', ToastAndroid.SHORT);
-      return;
-    }
-
-    let itemArray = await AsyncStorage.getItem('cartItems');
-    itemArray = JSON.parse(itemArray);
-    if (itemArray) {
-      let array = itemArray;
-      array.push(id);
-
-      try {
-        await AsyncStorage.setItem('cartItems', JSON.stringify(array));
-        ToastAndroid.show(
-          'Item Added successfully to cart',
-          ToastAndroid.SHORT,
-        );
-        navigation.navigate('Home');
-      } catch (error) {
-        return error;
-      }
-    } else {
-      let array = [];
-      array.push(id);
-      try {
-        await AsyncStorage.setItem('cartItems', JSON.stringify(array));
-        ToastAndroid.show(
-          'Item Added successfully to cart',
-          ToastAndroid.SHORT,
-        );
-        navigation.navigate('Home');
-      } catch (error) {
-        return error;
-      }
-    }
-  };
-
-  // add items to database
-  const placeOrder = async product => {
-    if (!selectedQty) {
-      ToastAndroid.show('Please select Quantity', ToastAndroid.SHORT);
-      return;
-    }
-
-    // checking the conditions
-
-    // make axios call and send data to backend
-    await createOrder(
-      {
-        ownerId: product.ownerId,
-        owner: product.owner,
-        title: product.title,
-        siteManager: userId,
-        productId: product._id,
-        quantity: selectedQty,
-        unitPrice: product.unitPrice,
-        totalAmount: product.unitPrice * selectedQty + deliveryFee,
-      },
-      setIsCreationSuccess,
-    ).then(() => {
-      console.log('Order has placed');
-      ToastAndroid.show('Order placed', ToastAndroid.SHORT);
-      navigation.navigate('Home');
-    });
-  };
-
   return (
     <>
       {product && (
@@ -149,96 +168,94 @@ const ProductInfo = ({route, navigation}) => {
             barStyle="dark-content"
           />
 
-         {/*start - status bar icons - bottom */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          height: '6%',
-          width: '100%',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-        <View
-          style={{
-            width: '100%',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            zIndex: 999,
-            backgroundColor: COLOURS.backgroundLight,
-            paddingHorizontal: 10,
-          }}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Home')}
-            >
-            <MaterialCommunityIcons
-              name="home-outline"
+          {/*start - status bar icons - bottom */}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              height: '6%',
+              width: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            <View
               style={{
-                fontSize: 20,
-                color: COLOURS.backgroundMedium,
-                padding: 12,
-                borderRadius: 10,
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                zIndex: 999,
                 backgroundColor: COLOURS.backgroundLight,
-              }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-          onPress={() => navigation.navigate('ApprovedDeliveryNote')}
-          >
-            <FontAwesome
-              name="search"
-              style={{
-                fontSize: 18,
-                color: COLOURS.backgroundMedium,
-                padding: 12,
-                borderRadius: 10,
-                backgroundColor: COLOURS.backgroundLight,
-              }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-          // onPress={() => navigation.navigate('OrderedItems')}
-          >
-            <FontAwesome
-              name="user-o"
-              style={{
-                fontSize: 18,
-                color: COLOURS.backgroundMedium,
-                padding: 12,
-                borderRadius: 10,
-                backgroundColor: COLOURS.backgroundLight,
-              }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('OrderHistory')}>
-            <MaterialCommunityIcons
-              name="history"
-              style={{
-                fontSize: 18,
-                color: COLOURS.backgroundMedium,
-                padding: 12,
-                borderRadius: 10,
-                backgroundColor: COLOURS.backgroundLight,
-              }}
-            />
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => navigation.navigate('OrderedItems')}>
-            <MaterialCommunityIcons
-              name="format-list-text"
-              style={{
-                fontSize: 18,
-                color: COLOURS.backgroundMedium,
-                padding: 12,
-                borderRadius: 10,
-                backgroundColor: COLOURS.backgroundLight,
-              }}
-            />
-          </TouchableOpacity>
-          
-        </View>
-      </View>
-      {/*end - status bar icons - bottom */}
+                paddingHorizontal: 10,
+              }}>
+              <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+                <MaterialCommunityIcons
+                  name="home-outline"
+                  style={{
+                    fontSize: 20,
+                    color: COLOURS.backgroundMedium,
+                    padding: 12,
+                    borderRadius: 10,
+                    backgroundColor: COLOURS.backgroundLight,
+                  }}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ApprovedDeliveryNote')}>
+                <FontAwesome
+                  name="search"
+                  style={{
+                    fontSize: 18,
+                    color: COLOURS.backgroundMedium,
+                    padding: 12,
+                    borderRadius: 10,
+                    backgroundColor: COLOURS.backgroundLight,
+                  }}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+              // onPress={() => navigation.navigate('OrderedItems')}
+              >
+                <FontAwesome
+                  name="user-o"
+                  style={{
+                    fontSize: 18,
+                    color: COLOURS.backgroundMedium,
+                    padding: 12,
+                    borderRadius: 10,
+                    backgroundColor: COLOURS.backgroundLight,
+                  }}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('OrderHistory')}>
+                <MaterialCommunityIcons
+                  name="history"
+                  style={{
+                    fontSize: 18,
+                    color: COLOURS.backgroundMedium,
+                    padding: 12,
+                    borderRadius: 10,
+                    backgroundColor: COLOURS.backgroundLight,
+                  }}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('OrderedItems')}>
+                <MaterialCommunityIcons
+                  name="format-list-text"
+                  style={{
+                    fontSize: 18,
+                    color: COLOURS.backgroundMedium,
+                    padding: 12,
+                    borderRadius: 10,
+                    backgroundColor: COLOURS.backgroundLight,
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+          {/*end - status bar icons - bottom */}
 
           <ScrollView>
             <View

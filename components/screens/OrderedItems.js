@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +26,7 @@ import moment from 'moment';
 import {viewProduct} from '../APIs/productAPI';
 import ProductImage from '../common/ProductImage';
 import DropdownComponent from '../common/DropdownComponent';
+import {decrementSMtotalSpent, updateSMtotalSpent} from '../APIs/userAPI';
 
 const OrderedItems = ({navigation}) => {
   const [product, setProduct] = useState();
@@ -47,12 +49,35 @@ const OrderedItems = ({navigation}) => {
     return unsubscribe;
   }, [navigation]);
 
-  const getTotal = () => {
+  const getTotal = async () => {
     let total = 0;
     for (let index = 0; index < ordersList.length; index++) {
-      let productPrice =
-        ordersList[index].unitPrice * ordersList[index].quantity;
-      total = total + productPrice;
+      if (ordersList[index].partialyApprovedQty) {
+        let productPrice =
+          ordersList[index].unitPrice * ordersList[index].partialyApprovedQty;
+        total = total + productPrice;
+
+        // get the difference
+
+        // let difference =
+        //   ordersList[index].unitPrice * ordersList[index].quantity -
+        //   ordersList[index].unitPrice * ordersList[index].partialyApprovedQty;
+        // await decrementSMtotalSpent(userId, {amount: difference})
+        //   .then(() => console.log("site manager's spent amount updated"))
+        //   .catch(err => console.log(err));
+      }
+      // else if (ordersList[index].status == 'rejected') {
+      //   await decrementSMtotalSpent(userId, {
+      //     amount: ordersList[index].unitPrice * ordersList[index].quantity,
+      //   })
+      //     .then(() => console.log("site manager's spent amount updated"))
+      //     .catch(err => console.log(err));
+      // }
+      else if (ordersList[index].status != 'rejected') {
+        let productPrice =
+          ordersList[index].unitPrice * ordersList[index].quantity;
+        total = total + productPrice;
+      }
     }
     setTotal(total);
   };
@@ -107,6 +132,15 @@ const OrderedItems = ({navigation}) => {
       getOrders();
     });
 
+    // // increment user's total spent
+    // await updateSMtotalSpent(userId, selectedQty * product.unitPrice).then(
+    //   () => {
+    //     console.log("Site manager's total spent incremented");
+    //   },
+    // ).catch((err) => {
+    //   console.log(err)
+    // })
+
     setSelectedQty();
   };
 
@@ -115,9 +149,9 @@ const OrderedItems = ({navigation}) => {
     return (
       <TouchableOpacity
         key={data._id}
-        onPress={() =>
-          navigation.navigate('ProductInfo', {productID: data._id})
-        }
+        // onPress={() =>
+        //   navigation.navigate('ProductInfo', {productID: data._id})
+        // }
         style={{
           width: '100%',
           height: 130,
@@ -160,15 +194,18 @@ const OrderedItems = ({navigation}) => {
             <View>
               <Text>{data.quantity}</Text>
             </View>
-            <View>
-              <Text
-                style={{
-                  fontWeight: '400',
-                  opacity: 0.6,
-                }}>
-                From {data.owner}
-              </Text>
-            </View>
+
+            {data.partialyApprovedQty && data.partialyApprovedQty > 0 ? null : (
+              <View>
+                <Text
+                  style={{
+                    fontWeight: '400',
+                    opacity: 0.6,
+                  }}>
+                  From {data.owner}
+                </Text>
+              </View>
+            )}
 
             <View
               style={{
@@ -259,6 +296,71 @@ const OrderedItems = ({navigation}) => {
                     }}>
                     Rejected
                   </Text>
+                </>
+              )}
+
+              {data.partialyApprovedQty ? (
+                <View
+                  style={{
+                    width: '100%',
+                  }}>
+                  <Text>{data.partialyApprovedQty} orders approved</Text>
+                  {/* <Text
+                    style={{
+                      color: COLOURS.blue2,
+                      fontWeight: '400',
+                      paddingHorizontal: 6,
+                      borderRadius: 6,
+                      // width: '100%',
+                      padding: 3,
+                      backgroundColor: COLOURS.blueLight,
+                      marginBottom: 20
+                    }}>
+                    Order partially approved
+                  </Text> */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      // marginBottom: 30
+                    }}>
+                    <FontAwesome
+                      name="circle"
+                      style={{
+                        fontSize: 16,
+                        marginRight: 6,
+                        color: COLOURS.blue,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        color: COLOURS.blue2,
+                        fontWeight: '500',
+                      }}>
+                      Partially app.
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {data.status == 'topManager' && (
+                    <>
+                      <FontAwesome
+                        name="circle"
+                        style={{
+                          fontSize: 16,
+                          marginRight: 6,
+                          color: COLOURS.yellowLight,
+                        }}
+                      />
+                      <Text
+                        style={{
+                          color: COLOURS.yellow,
+                          fontWeight: '500',
+                        }}>
+                        Processing
+                      </Text>
+                    </>
+                  )}
                 </>
               )}
             </View>
@@ -469,7 +571,87 @@ const OrderedItems = ({navigation}) => {
             </>
           ) : (
             <>
-              {data.status == 'approved' && (
+              {data.status == 'approved' && !data.deliveryNoteAdded && (
+                <>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}></View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                      }}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          navigation.navigate('DeliveryNote', {
+                            OrderID: data._id,
+                          })
+                        }>
+                        <View
+                          style={{
+                            backgroundColor: COLOURS.backgroundLight,
+                            borderRadius: 6,
+                            paddingHorizontal: 8,
+                            padding: 4,
+                          }}>
+                          <Text>Add Delivery</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* automatic delivery note */}
+              {data.status == 'automatic' && !data.deliveryNoteAdded && (
+                <>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}></View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                      }}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          navigation.navigate('ApprovedDeliveryNote', {
+                            OrderID: data._id,
+                          })
+                        }>
+                        <View
+                          style={{
+                            backgroundColor: COLOURS.backgroundLight,
+                            borderRadius: 6,
+                            paddingHorizontal: 8,
+                            padding: 4,
+                          }}>
+                          <Text>Add Delivery</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </>
+              )}
+
+
+
+              {/* partially approved */}
+              {data.partialyApprovedQty && !data.deliveryNoteAdded && (
                 <>
                   <View
                     style={{
@@ -540,9 +722,7 @@ const OrderedItems = ({navigation}) => {
             backgroundColor: COLOURS.backgroundLight,
             paddingHorizontal: 10,
           }}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Home')}
-            >
+          <TouchableOpacity onPress={() => navigation.navigate('Home')}>
             <MaterialCommunityIcons
               name="home-outline"
               style={{
@@ -554,9 +734,8 @@ const OrderedItems = ({navigation}) => {
               }}
             />
           </TouchableOpacity>
-          <TouchableOpacity 
-          onPress={() => navigation.navigate('ApprovedDeliveryNote')}
-          >
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ApprovedDeliveryNote')}>
             <FontAwesome
               name="search"
               style={{
@@ -568,7 +747,7 @@ const OrderedItems = ({navigation}) => {
               }}
             />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
           // onPress={() => navigation.navigate('OrderedItems')}
           >
             <FontAwesome
@@ -594,7 +773,7 @@ const OrderedItems = ({navigation}) => {
               }}
             />
           </TouchableOpacity>
-          
+
           <TouchableOpacity onPress={() => navigation.navigate('OrderedItems')}>
             <MaterialCommunityIcons
               name="format-list-text"
@@ -607,7 +786,6 @@ const OrderedItems = ({navigation}) => {
               }}
             />
           </TouchableOpacity>
-          
         </View>
       </View>
       {/*end - status bar icons - bottom */}
@@ -656,8 +834,13 @@ const OrderedItems = ({navigation}) => {
           }}>
           My Orders
         </Text>
+
         <View style={{paddingHorizontal: 16}}>
-          {ordersList ? ordersList.map(renderProducts) : null}
+          {ordersList ? (
+            ordersList.map(renderProducts)
+          ) : (
+            <ActivityIndicator size="large" color={COLOURS.yellow} />
+          )}
         </View>
         <View>
           <View
